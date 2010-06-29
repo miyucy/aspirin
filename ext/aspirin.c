@@ -407,27 +407,7 @@ aspirin_server_port(VALUE options)
     VALUE port = Qnil;
     if(TYPE(options) == T_HASH)
     {
-        port = rb_hash_aref(options, ID2SYM(rb_intern("port")));
-        if(!NIL_P(port)){
-            return NUM2INT(port);
-        }
-        port = rb_hash_aref(options, rb_str_new2("port"));
-        if(!NIL_P(port)){
-            return NUM2INT(port);
-        }
         port = rb_hash_aref(options, ID2SYM(rb_intern("Port")));
-        if(!NIL_P(port)){
-            return NUM2INT(port);
-        }
-        port = rb_hash_aref(options, rb_str_new2("Port"));
-        if(!NIL_P(port)){
-            return NUM2INT(port);
-        }
-        port = rb_hash_aref(options, ID2SYM(rb_intern("PORT")));
-        if(!NIL_P(port)){
-            return NUM2INT(port);
-        }
-        port = rb_hash_aref(options, rb_str_new2("PORT"));
         if(!NIL_P(port)){
             return NUM2INT(port);
         }
