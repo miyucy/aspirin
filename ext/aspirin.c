@@ -61,6 +61,8 @@ static void  aspirin_server_http_initialize(Aspirin_Server*);
 
 static void  set_http_version(VALUE, struct evhttp_request*);
 static void  set_path_info(VALUE, struct evhttp_request*);
+static void  set_response_header(struct evhttp_request*, VALUE);
+static void  set_additional_header(struct evhttp_request*);
 
 static void  init_default_env();
 static VALUE dupe_default_env();
