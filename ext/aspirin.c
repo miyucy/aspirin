@@ -9,7 +9,7 @@
 #include <evhttp.h>
 #include <evutil.h>
 
-#define INSPECT(obj) {VALUE __obj__ = rb_inspect((obj)); fprintf(stderr, "%s\n", RSTRING_PTR(__obj__));}
+#define INSPECT(obj) {VALUE __obj__ = rb_inspect((obj)); fprintf(stderr, "%d:%s\n", __LINE__, RSTRING_PTR(__obj__));}
 
 static VALUE rb_mAspirin;
 static VALUE rb_cAspirin_Server;
@@ -208,7 +208,7 @@ aspirin_server_create_env(struct evhttp_request *req, Aspirin_Server *srv)
     strio = rb_funcall(rb_cStringIO, rb_intern("new"), 1, rack_input);
     rb_hash_aset(env, rb_str_new2("rack.input"), strio);
 
-    fprintf(stderr, "%s\n", req->remote_host);
+    //fprintf(stderr, "%d:%s\n", __LINE__, req->remote_host);
     remote_host = rb_str_new2(req->remote_host);
     OBJ_FREEZE(remote_host);
     rb_hash_aset(env, rb_str_new2("REMOTE_ADDR"), remote_host);
@@ -306,8 +306,8 @@ aspirin_server_http_request(struct evhttp_request *req, void *arg)
 
     rb_gc_unregister_address(&guard);
 
-    rb_gc_force_recycle(env);
-    rb_gc_start();
+    // rb_gc_force_recycle(env);
+    // rb_gc_start();
 }
 
 static Aspirin_Server*
