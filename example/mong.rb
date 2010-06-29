@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 require 'rubygems'
 require 'rack'
-require 'pp'
 
 class HelloApp
   def call(env)
@@ -31,31 +30,20 @@ __END__
 "SERVER_PORT" => "8080"
 "SERVER_PROTOCOL" => "HTTP/1.1"
 "SERVER_SOFTWARE" => "Mongrel 1.1.5"
-"rack.errors" => #<IO:0xb77b8560>
-"rack.input" => #<StringIO:0xb708bb34>
+"rack.errors" => #<IO:0x816a550>
+"rack.input" => #<StringIO:0x8c3e440>
 "rack.multiprocess" => false
 "rack.multithread" => true
 "rack.run_once" => false
 "rack.url_scheme" => "http"
 "rack.version" => [1, 1]
 
-∴ ab -n 1000 -c 10 http://127.0.0.1:8080/
+∴ ab -n 10000 -c 100 http://127.0.0.1:8080/ 2>/dev/null
 This is ApacheBench, Version 2.3 <$Revision: 655654 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
 
 Benchmarking 127.0.0.1 (be patient)
-Completed 100 requests
-Completed 200 requests
-Completed 300 requests
-Completed 400 requests
-Completed 500 requests
-Completed 600 requests
-Completed 700 requests
-Completed 800 requests
-Completed 900 requests
-Completed 1000 requests
-Finished 1000 requests
 
 
 Server Software:
@@ -65,32 +53,32 @@ Server Port:            8080
 Document Path:          /
 Document Length:        11 bytes
 
-Concurrency Level:      10
-Time taken for tests:   1.236 seconds
-Complete requests:      1000
+Concurrency Level:      100
+Time taken for tests:   10.356 seconds
+Complete requests:      10000
 Failed requests:        0
 Write errors:           0
-Total transferred:      132000 bytes
-HTML transferred:       11000 bytes
-Requests per second:    808.99 [#/sec] (mean)
-Time per request:       12.361 [ms] (mean)
-Time per request:       1.236 [ms] (mean, across all concurrent requests)
-Transfer rate:          104.28 [Kbytes/sec] received
+Total transferred:      1320000 bytes
+HTML transferred:       110000 bytes
+Requests per second:    965.64 [#/sec] (mean)
+Time per request:       103.558 [ms] (mean)
+Time per request:       1.036 [ms] (mean, across all concurrent requests)
+Transfer rate:          124.48 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
-Connect:        0    0   0.0      0       0
-Processing:     5   12   8.5      9      58
-Waiting:        5   12   8.5      9      58
-Total:          5   12   8.5      9      58
+Connect:        0    0   0.7      0      10
+Processing:    28  103  12.7     98     138
+Waiting:       28  103  12.7     98     138
+Total:         37  103  12.5     98     138
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%     10
-  75%     10
-  80%     11
-  90%     24
-  95%     30
-  98%     43
-  99%     56
- 100%     58 (longest request)
+  50%     98
+  66%    102
+  75%    116
+  80%    118
+  90%    121
+  95%    124
+  98%    131
+  99%    133
+ 100%    138 (longest request)
