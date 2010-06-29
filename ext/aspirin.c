@@ -141,8 +141,8 @@ set_path_info(VALUE env, struct evhttp_request *req)
     char *buf, *query;
     int   len = strlen(evhttp_request_uri(req));
 
-    buf = xmalloc(len * sizeof(char) + 1);
-    memcpy(buf, evhttp_request_uri(req), len + 1);
+    buf = xmalloc(len + 1);
+    strcpy(buf, evhttp_request_uri(req));
 
     query = strrchr(buf, '?');
     if(query != NULL)
@@ -180,13 +180,14 @@ set_http_header(VALUE env, struct evhttp_request *req)
         len = strlen(header->key);
         if(len > 0)
         {
-            buf = xmalloc(len * sizeof(char) + 5 + 1);
+            buf = xmalloc(5 + len + 1);
 
             strncpy(buf, "HTTP_", 5);
             strncpy(buf + 5, header->key, len);
+            buf[len + 5] = '\0';
             hyphen_to_under(upcase(buf));
 
-            key = rb_str_new(buf, len + 5);
+            key = rb_str_new2(buf);
             val = rb_str_new2(header->value);
             OBJ_FREEZE(val);
             rb_hash_aset(env, key, val);
