@@ -129,11 +129,9 @@ get_status_code_message(int status_code)
 static void
 set_http_version(VALUE env, struct evhttp_request *req)
 {
-    char buff[9];
-    snprintf(buff, 8, "HTTP/%d.%d", req->major, req->minor);
-    VALUE val = rb_str_new(buff, 8);
-    OBJ_FREEZE(val);
-    rb_hash_aset(env, rb_str_new2("HTTP_VERSION"), val);
+    char  buf[8 + 1]; // HTTP/x.y
+    snprintf(buf, 9, "HTTP/%d.%d", req->major, req->minor);
+    rb_hash_aset(env, rb_str_new2("HTTP_VERSION"), rb_str_new2(buf));
 }
 
 static void
@@ -202,11 +200,11 @@ set_http_header(VALUE env, struct evhttp_request *req)
 static VALUE
 aspirin_server_create_env(struct evhttp_request *req, Aspirin_Server *srv)
 {
-    VALUE env, rack_input, strio, remote_host, request_uri, rbstrerr, method;
+    VALUE env, rack_input, strio, remote_host, request_uri, method;
 
     env = rb_funcall(srv->env, rb_intern("dup"), 0);
-    rbstrerr = rb_gv_get("$stderr");
-    rb_hash_aset(env, rb_str_new2("rack.errors"), rbstrerr);
+
+    rb_hash_aset(env, rb_str_new2("rack.errors"), rb_gv_get("$stderr"));
 
     rack_input = rb_str_new((const char*)EVBUFFER_DATA(req->input_buffer),
                             EVBUFFER_LENGTH(req->input_buffer));
@@ -214,7 +212,6 @@ aspirin_server_create_env(struct evhttp_request *req, Aspirin_Server *srv)
     strio = rb_funcall(rb_cStringIO, rb_intern("new"), 1, rack_input);
     rb_hash_aset(env, rb_str_new2("rack.input"), strio);
 
-    //fprintf(stderr, "%d:%s\n", __LINE__, req->remote_host);
     remote_host = rb_str_new2(req->remote_host);
     OBJ_FREEZE(remote_host);
     rb_hash_aset(env, rb_str_new2("REMOTE_ADDR"), remote_host);
@@ -280,26 +277,25 @@ aspirin_server_http_request(struct evhttp_request *req, void *arg)
     static VALUE args[][1] = {{INT2FIX(0)},{INT2FIX(1)},{INT2FIX(2)}};
     struct evbuffer *buf;
     Aspirin_Server  *srv;
-    VALUE env, result, status_code, bodies_val, bodies, headers;
+    VALUE env, result, bodies;
+    int   status_code;
     char *status_code_msg;
 
     srv = arg;
     env = aspirin_server_create_env(req, srv);
     result = rb_funcall(srv->app, rb_intern("call"), 1, env);
 
-    status_code = rb_ary_aref(1, args[0], result);
-    status_code_msg = get_status_code_message(NUM2INT(status_code));
+    status_code = NUM2INT(rb_ary_aref(1, args[0], result));
+    status_code_msg = get_status_code_message(status_code);
     if(status_code_msg == NULL)
     {
         status_code_msg = "";
     }
 
-    headers = rb_ary_aref(1, args[1], result);
-    set_response_header(req, headers);
+    set_response_header(req, rb_ary_aref(1, args[1], result));
     set_additional_header(req);
 
-    bodies_val = rb_ary_aref(1, args[2], result);
-    bodies = rb_funcall(bodies_val, rb_intern("to_s"), 0);
+    bodies = rb_funcall(rb_ary_aref(1, args[2], result), rb_intern("to_s"), 0);
 
     buf = evbuffer_new();
     evbuffer_add(buf, RSTRING_PTR(bodies), RSTRING_LEN(bodies));
