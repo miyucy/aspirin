@@ -485,10 +485,10 @@ static char*
 upcase(char* str)
 {
     if(str){
-        int i, n=strlen(str);
-        for(i=0; i<n; i++)
+        char* tmp;
+        for(tmp=str; *tmp; tmp++)
         {
-            str[i] = toupper(str[i]);
+            *tmp = toupper(*tmp);
         }
     }
     return str;
@@ -498,12 +498,12 @@ static char*
 hyphen_to_under(char* str)
 {
     if(str){
-        int i, n=strlen(str);
-        for(i=0; i<n; i++)
+        char* tmp;
+        for(tmp=str; *tmp; tmp++)
         {
-            if(str[i] == '-')
+            if(*tmp == '-')
             {
-                str[i] = '_';
+                *tmp = '_';
             }
         }
     }
