@@ -31,7 +31,9 @@ typedef struct
 {
     struct event_base* base;
     struct evhttp*     http;
-    struct event       signal;
+    struct event       sig_int;
+    struct event       sig_quit;
+    struct event       sig_term;
     VALUE              app;
     VALUE              options;
     VALUE              env;
@@ -56,7 +58,8 @@ static VALUE aspirin_server_create_env(struct evhttp_request*, Aspirin_Server*);
 
 static void  aspirin_server_base_initialize(Aspirin_Server*);
 static void  aspirin_server_signal_initialize(Aspirin_Server*);
-static void  aspirin_server_sigint(int, short, void*);
+static void  aspirin_server_stop(int, short, void*);
+static void  aspirin_server_stop_bang(int, short, void*);
 static void  aspirin_server_http_initialize(Aspirin_Server*);
 
 static void  set_http_version(VALUE, struct evhttp_request*);
@@ -368,7 +371,9 @@ aspirin_server_free(Aspirin_Server* srv)
         return;
     }
 
-    event_del(&srv->signal);
+    event_del(&srv->sig_int);
+    event_del(&srv->sig_quit);
+    event_del(&srv->sig_term);
 
     if(srv->http)
     {
@@ -393,11 +398,18 @@ aspirin_server_alloc(VALUE klass)
 }
 
 static void
-aspirin_server_sigint(int fd, short event, void *arg)
+aspirin_server_stop_bang(int fd, short event, void *arg)
+{
+    Aspirin_Server *srv = arg;
+    event_base_loopbreak(srv->base);
+}
+
+static void
+aspirin_server_stop(int fd, short event, void *arg)
 {
     Aspirin_Server *srv = arg;
     struct timeval delay = {1, 0};
-    event_del(&srv->signal);
+    event_del(&srv->sig_quit);
     event_base_loopexit(srv->base, &delay);
 }
 
@@ -438,9 +450,17 @@ aspirin_server_base_initialize(Aspirin_Server *srv)
 static void
 aspirin_server_signal_initialize(Aspirin_Server *srv)
 {
-    event_set(&srv->signal, SIGINT, EV_SIGNAL|EV_PERSIST, aspirin_server_sigint, srv);
-    event_base_set(srv->base, &srv->signal);
-    event_add(&srv->signal, NULL);
+    event_set(&srv->sig_quit, SIGQUIT, EV_SIGNAL|EV_PERSIST, aspirin_server_stop, srv);
+    event_base_set(srv->base, &srv->sig_quit);
+    event_add(&srv->sig_quit, NULL);
+
+    event_set(&srv->sig_int,  SIGINT, EV_SIGNAL|EV_PERSIST, aspirin_server_stop_bang, srv);
+    event_base_set(srv->base, &srv->sig_int);
+    event_add(&srv->sig_int, NULL);
+
+    event_set(&srv->sig_term, SIGTERM, EV_SIGNAL|EV_PERSIST, aspirin_server_stop_bang, srv);
+    event_base_set(srv->base, &srv->sig_term);
+    event_add(&srv->sig_term, NULL);
 }
 
 static void
