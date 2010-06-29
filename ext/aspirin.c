@@ -278,7 +278,7 @@ aspirin_server_http_request(struct evhttp_request *req, void *arg)
     static VALUE args[][1] = {{INT2FIX(0)},{INT2FIX(1)},{INT2FIX(2)}};
     struct evbuffer *buf;
     Aspirin_Server  *srv;
-    VALUE env, result, status_code, bodies_val, bodies, headers, guard;
+    VALUE env, result, status_code, bodies_val, bodies, headers;
     char *status_code_msg;
 
     srv = arg;
@@ -296,22 +296,13 @@ aspirin_server_http_request(struct evhttp_request *req, void *arg)
     set_response_header(req, headers);
     set_additional_header(req);
 
-    guard = rb_ary_new();
-    rb_gc_register_address(&guard);
-
     bodies_val = rb_ary_aref(1, args[2], result);
     bodies = rb_funcall(bodies_val, rb_intern("to_s"), 0);
 
     buf = evbuffer_new();
     evbuffer_add(buf, RSTRING_PTR(bodies), RSTRING_LEN(bodies));
-    rb_ary_push(guard, bodies);
-    evhttp_send_reply(req, NUM2INT(status_code), status_code_msg, buf);
+    evhttp_send_reply(req, status_code, status_code_msg, buf);
     evbuffer_free(buf);
-
-    rb_gc_unregister_address(&guard);
-
-    // rb_gc_force_recycle(env);
-    // rb_gc_start();
 }
 
 static Aspirin_Server*
