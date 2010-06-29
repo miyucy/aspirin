@@ -416,32 +416,12 @@ aspirin_server_port(VALUE options)
 }
 
 static VALUE
-aspirin_server_address(VALUE options)
+aspirin_server_host(VALUE options)
 {
     VALUE address = Qnil;
     if(TYPE(options) == T_HASH)
     {
-        address = rb_hash_aref(options, ID2SYM(rb_intern("address")));
-        if(!NIL_P(address)){
-            return address;
-        }
-        address = rb_hash_aref(options, rb_str_new2("address"));
-        if(!NIL_P(address)){
-            return address;
-        }
-        address = rb_hash_aref(options, ID2SYM(rb_intern("Address")));
-        if(!NIL_P(address)){
-            return address;
-        }
-        address = rb_hash_aref(options, rb_str_new2("Address"));
-        if(!NIL_P(address)){
-            return address;
-        }
-        address = rb_hash_aref(options, ID2SYM(rb_intern("ADDRESS")));
-        if(!NIL_P(address)){
-            return address;
-        }
-        address = rb_hash_aref(options, rb_str_new2("ADDRESS"));
+        address = rb_hash_aref(options, ID2SYM(rb_intern("Host")));
         if(!NIL_P(address)){
             return address;
         }
@@ -466,18 +446,18 @@ aspirin_server_signal_initialize(Aspirin_Server *srv)
 static void
 aspirin_server_http_initialize(Aspirin_Server *srv)
 {
-    VALUE addr = aspirin_server_address(srv->options);
+    VALUE host = aspirin_server_host(srv->options);
     int   port = aspirin_server_port(srv->options);
 
-    StringValue(addr);
-    rb_hash_aset(srv->env, rb_str_new2("SERVER_NAME"), addr);
+    StringValue(host);
+    rb_hash_aset(srv->env, rb_str_new2("SERVER_NAME"), host);
 
     char port_str[6];
     snprintf(port_str, 5, "%d", port);
     rb_hash_aset(srv->env, rb_str_new2("SERVER_PORT"), rb_str_new2(port_str));
 
     srv->http = evhttp_new(srv->base);
-    evhttp_bind_socket(srv->http, RSTRING_PTR(addr), port);
+    evhttp_bind_socket(srv->http, RSTRING_PTR(host), port);
     evhttp_set_gencb(srv->http, aspirin_server_http_request, srv);
 }
 
