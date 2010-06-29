@@ -78,30 +78,16 @@ static char* hyphen_to_under(char*);
 static void
 init_default_env()
 {
-    VALUE rack_url_scheme, rack_version, gateway_interface, server_protocol, script_name;
-
-    rack_url_scheme   = rb_str_new2("http");
-    rack_version      = rb_ary_new3(2, INT2FIX(1), INT2FIX(1));
-    gateway_interface = rb_str_new2("CGI/1.2");
-    server_protocol   = rb_str_new2("HTTP/1.1");
-    script_name       = rb_str_new2("");
-
-    OBJ_FREEZE(rack_url_scheme);
-    OBJ_FREEZE(rack_version);
-    OBJ_FREEZE(gateway_interface);
-    OBJ_FREEZE(server_protocol);
-    OBJ_FREEZE(script_name);
-
     default_env = rb_hash_new();
 
     rb_hash_aset(default_env, rb_str_new2("rack.multiprocess"), Qfalse);
     rb_hash_aset(default_env, rb_str_new2("rack.multithread"),  Qfalse);
     rb_hash_aset(default_env, rb_str_new2("rack.run_once"),     Qfalse);
-    rb_hash_aset(default_env, rb_str_new2("rack.url_scheme"),   rack_url_scheme);
-    rb_hash_aset(default_env, rb_str_new2("rack.version"),      rack_version);
-    rb_hash_aset(default_env, rb_str_new2("GATEWAY_INTERFACE"), gateway_interface);
-    rb_hash_aset(default_env, rb_str_new2("SCRIPT_NAME"),       script_name);
-    rb_hash_aset(default_env, rb_str_new2("SERVER_PROTOCOL"),   server_protocol);
+    rb_hash_aset(default_env, rb_str_new2("rack.url_scheme"),   rb_obj_freeze(rb_str_new2("http")));
+    rb_hash_aset(default_env, rb_str_new2("rack.version"),      rb_obj_freeze(rb_ary_new3(2, INT2FIX(1), INT2FIX(1))));
+    rb_hash_aset(default_env, rb_str_new2("GATEWAY_INTERFACE"), rb_obj_freeze(rb_str_new2("CGI/1.2")));
+    rb_hash_aset(default_env, rb_str_new2("SCRIPT_NAME"),       rb_obj_freeze(rb_str_new2("")));
+    rb_hash_aset(default_env, rb_str_new2("SERVER_PROTOCOL"),   rb_obj_freeze(rb_str_new2("HTTP/1.1")));
 }
 
 static VALUE
@@ -134,7 +120,7 @@ set_http_version(VALUE env, struct evhttp_request *req)
 {
     char  buf[8 + 1]; // HTTP/x.y
     snprintf(buf, 9, "HTTP/%d.%d", req->major, req->minor);
-    rb_hash_aset(env, rb_str_new2("HTTP_VERSION"), rb_str_new2(buf));
+    rb_hash_aset(env, rb_str_new2("HTTP_VERSION"), rb_obj_freeze(rb_str_new2(buf)));
 }
 
 static void
@@ -160,8 +146,8 @@ set_path_info(VALUE env, struct evhttp_request *req)
     request_uri  = rb_str_new2(buf);
     query_string = rb_str_new2(query);
 
-    OBJ_FREEZE(request_uri);
-    OBJ_FREEZE(query_string);
+    rb_obj_freeze(request_uri);
+    rb_obj_freeze(query_string);
 
     rb_hash_aset(env, rb_str_new2("PATH_INFO"), request_uri);
     rb_hash_aset(env, rb_str_new2("REQUEST_PATH"), request_uri);
@@ -176,7 +162,6 @@ set_http_header(VALUE env, struct evhttp_request *req)
     char  *buf;
     size_t len;
     struct evkeyval *header;
-    VALUE key, val;
 
     TAILQ_FOREACH(header, req->input_headers, next)
     {
@@ -190,10 +175,7 @@ set_http_header(VALUE env, struct evhttp_request *req)
             buf[len + 5] = '\0';
             hyphen_to_under(upcase(buf));
 
-            key = rb_str_new2(buf);
-            val = rb_str_new2(header->value);
-            OBJ_FREEZE(val);
-            rb_hash_aset(env, key, val);
+            rb_hash_aset(env, rb_str_new2(buf), rb_obj_freeze(rb_str_new2(header->value)));
 
             xfree(buf);
         }
@@ -211,29 +193,29 @@ aspirin_server_create_env(struct evhttp_request *req, Aspirin_Server *srv)
 
     rack_input = rb_str_new((const char*)EVBUFFER_DATA(req->input_buffer),
                             EVBUFFER_LENGTH(req->input_buffer));
-    OBJ_FREEZE(rack_input);
+    rb_obj_freeze(rack_input);
     strio = rb_funcall(rb_cStringIO, rb_intern("new"), 1, rack_input);
     rb_hash_aset(env, rb_str_new2("rack.input"), strio);
 
-    remote_host = rb_str_new2(req->remote_host);
-    OBJ_FREEZE(remote_host);
-    rb_hash_aset(env, rb_str_new2("REMOTE_ADDR"), remote_host);
+    rb_hash_aset(env,
+                 rb_str_new2("REMOTE_ADDR"),
+                 rb_obj_freeze(rb_str_new2(req->remote_host)));
 
-    request_uri = rb_str_new2(evhttp_request_uri(req));
-    OBJ_FREEZE(request_uri);
-    rb_hash_aset(env, rb_str_new2("REQUEST_URI"), request_uri);
+    rb_hash_aset(env,
+                 rb_str_new2("REQUEST_URI"),
+                 rb_obj_freeze(rb_str_new2(evhttp_request_uri(req))));
 
     method = rb_str_new2("REQUEST_METHOD");
     switch(req->type)
     {
     case EVHTTP_REQ_GET:
-        rb_hash_aset(env, method, rb_str_new2("GET"));
+        rb_hash_aset(env, method, rb_obj_freeze(rb_str_new2("GET")));
         break;
     case EVHTTP_REQ_POST:
-        rb_hash_aset(env, method, rb_str_new2("POST"));
+        rb_hash_aset(env, method, rb_obj_freeze(rb_str_new2("POST")));
         break;
     case EVHTTP_REQ_HEAD:
-        rb_hash_aset(env, method, rb_str_new2("HEAD"));
+        rb_hash_aset(env, method, rb_obj_freeze(rb_str_new2("HEAD")));
         break;
     }
 
