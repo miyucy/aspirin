@@ -256,13 +256,39 @@ set_additional_header(struct evhttp_request *req)
     evhttp_add_header(req->output_headers, "Connection", "close");
 }
 
+static VALUE
+body_concat(VALUE chunk, VALUE* buff)
+{
+    StringValue(chunk);
+    rb_str_concat(*buff, chunk);
+    return Qnil;
+}
+
+static VALUE
+body_each(VALUE body)
+{
+    VALUE buff = rb_str_buf_new(0);
+    rb_iterate(rb_each, body, body_concat, (VALUE)&buff);
+    return buff;
+}
+
+static VALUE
+body_close(VALUE body)
+{
+    if(rb_respond_to(body, rb_intern("close")))
+    {
+        rb_funcall(body, rb_intern("close"), 0);
+    }
+    return Qnil;
+}
+
 static void
 aspirin_server_http_request(struct evhttp_request *req, void *arg)
 {
     static VALUE args[][1] = {{INT2FIX(0)},{INT2FIX(1)},{INT2FIX(2)}};
     struct evbuffer *buf;
     Aspirin_Server  *srv;
-    VALUE env, result, bodies;
+    VALUE env, result, body, bodystr;
     int   status_code;
     char *status_code_msg;
 
@@ -280,10 +306,11 @@ aspirin_server_http_request(struct evhttp_request *req, void *arg)
     set_response_header(req, rb_ary_aref(1, args[1], result));
     set_additional_header(req);
 
-    bodies = rb_funcall(rb_ary_aref(1, args[2], result), rb_intern("to_s"), 0);
+    body    = rb_ary_aref(1, args[2], result);
+    bodystr = rb_ensure(body_each, body, body_close, body);
 
     buf = evbuffer_new();
-    evbuffer_add(buf, RSTRING_PTR(bodies), RSTRING_LEN(bodies));
+    evbuffer_add(buf, RSTRING_PTR(bodystr), RSTRING_LEN(bodystr));
     evhttp_send_reply(req, status_code, status_code_msg, buf);
     evbuffer_free(buf);
 }
