@@ -1,5 +1,9 @@
 #include <ruby.h>
+#ifdef HAVE_RUBY_ST_H
+#include <ruby/st.h>
+#else
 #include <st.h>
+#endif
 #include <signal.h>
 #include <sys/queue.h>
 #include <stdio.h>
@@ -202,7 +206,7 @@ aspirin_server_create_env(struct evhttp_request *req, Aspirin_Server *srv)
     rbstrerr = rb_gv_get("$stderr");
     rb_hash_aset(env, rb_str_new2("rack.errors"), rbstrerr);
 
-    rack_input = rb_str_new(EVBUFFER_DATA(req->input_buffer),
+    rack_input = rb_str_new((const char*)EVBUFFER_DATA(req->input_buffer),
                             EVBUFFER_LENGTH(req->input_buffer));
     OBJ_FREEZE(rack_input);
     strio = rb_funcall(rb_cStringIO, rb_intern("new"), 1, rack_input);
