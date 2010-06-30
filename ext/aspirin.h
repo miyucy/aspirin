@@ -82,6 +82,5 @@ static VALUE dupe_default_env();
 static void  init_status_code_tbl();
 static char* get_status_code_message(int);
 
-static char* upcase(char*);
-static char* hyphen_to_under(char*);
+static char* upper_snake(char*);
 #endif

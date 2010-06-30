@@ -131,14 +131,8 @@ set_http_header(VALUE env, struct evhttp_request *req)
         if(len > 0)
         {
             buf = xmalloc(5 + len + 1);
-
-            strncpy(buf, "HTTP_", 5);
-            strncpy(buf + 5, header->key, len);
-            buf[len + 5] = '\0';
-            hyphen_to_under(upcase(buf));
-
+            upper_snake(strcpy(strcpy(buf, "HTTP_") + 5, header->key));
             rb_hash_aset(env, rb_str_new2(buf), rb_obj_freeze(rb_str_new2(header->value)));
-
             xfree(buf);
         }
     }
@@ -454,20 +448,7 @@ aspirin_server_http_initialize(Aspirin_Server *srv)
 }
 
 static char*
-upcase(char* str)
-{
-    if(str){
-        char* tmp;
-        for(tmp=str; *tmp; tmp++)
-        {
-            *tmp = toupper(*tmp);
-        }
-    }
-    return str;
-}
-
-static char*
-hyphen_to_under(char* str)
+upper_snake(char* str)
 {
     if(str){
         char* tmp;
@@ -476,6 +457,10 @@ hyphen_to_under(char* str)
             if(*tmp == '-')
             {
                 *tmp = '_';
+            }
+            else
+            {
+                *tmp = toupper(*tmp);
             }
         }
     }
