@@ -54,7 +54,7 @@ init_global_envs()
     global_envs[GE_SERVER_PORT   ] = rb_str_new2("SERVER_PORT");
     for(i=0; i<GLOBAL_ENVS_NUM; i++)
     {
-        global_envs[i] = rb_obj_freeze(global_envs[i]);
+        rb_gc_mark(rb_obj_freeze(global_envs[i]));
     }
 }
 
