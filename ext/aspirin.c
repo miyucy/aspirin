@@ -141,7 +141,7 @@ set_http_header(VALUE env, struct evhttp_request *req)
 static VALUE
 aspirin_server_create_env(struct evhttp_request *req, Aspirin_Server *srv)
 {
-    VALUE env, rack_input, strio, remote_host, request_uri;
+    VALUE env, rack_input, strio;
 
     env = rb_funcall(srv->env, rb_intern("dup"), 0);
 
@@ -241,7 +241,6 @@ body_close(VALUE body)
 static void
 aspirin_server_http_request(struct evhttp_request *req, void *arg)
 {
-    struct evbuffer *buf;
     Aspirin_Server  *srv;
     VALUE env, result, body, buff;
     int   status_code;

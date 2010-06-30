@@ -56,7 +56,7 @@ static VALUE aspirin_server_start(VALUE);
 // Rack::Handler::Aspirin.run
 static VALUE rack_handler_aspirin_run(int, VALUE*, VALUE);
 
-static VALUE aspirin_server_address(VALUE);
+static VALUE aspirin_server_host(VALUE);
 static int   aspirin_server_port(VALUE);
 
 static VALUE aspirin_server_alloc(VALUE);
