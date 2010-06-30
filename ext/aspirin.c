@@ -233,7 +233,6 @@ body_close(VALUE body)
 static void
 aspirin_server_http_request(struct evhttp_request *req, void *arg)
 {
-    static VALUE args[][1] = {{INT2FIX(0)},{INT2FIX(1)},{INT2FIX(2)}};
     struct evbuffer *buf;
     Aspirin_Server  *srv;
     VALUE env, result, body, data;
@@ -244,17 +243,17 @@ aspirin_server_http_request(struct evhttp_request *req, void *arg)
     env = aspirin_server_create_env(req, srv);
     result = rb_funcall(srv->app, rb_intern("call"), 1, env);
 
-    status_code = NUM2INT(rb_ary_aref(1, args[0], result));
+    status_code = NUM2INT(rb_ary_entry(result, 0));
     status_code_msg = get_status_code_message(status_code);
     if(status_code_msg == NULL)
     {
         status_code_msg = "";
     }
 
-    set_response_header(req, rb_ary_aref(1, args[1], result));
+    set_response_header(req, rb_ary_entry(result, 1));
     set_additional_header(req);
 
-    body = rb_ary_aref(1, args[2], result);
+    body = rb_ary_entry(result, 2);
     data = rb_ensure(body_each, body, body_close, body);
 
     evhttp_send_reply(req, status_code, status_code_msg, DATA_PTR(data));
