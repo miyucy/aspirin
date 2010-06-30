@@ -11,6 +11,7 @@ static const char* const status_code_str[] = {
     "Continue","Switching Protocols","Processing","OK","Created","Accepted","Non-Authoritative Information","No Content","Reset Content","Partial Content","Multi-Status","Already Reported","IM Used","Multiple Choices","Moved Permanently","Found","See Other","Not Modified","Use Proxy","","Temporary Redirect","Bad Request","Unauthorized","Payment Required","Forbidden","Not Found","Method Not Allowed","Not Acceptable","Proxy Authentication Required","Request Timeout","Conflict","Gone","Length Required","Precondition Failed","Request Entity Too Large","Request-URI Too Long","Unsupported Media Type","Requested Range Not Satisfiable","Expectation Failed","","","Unprocessable Entity","Locked","Failed Dependency","","Upgrade Required","Internal Server Error","Not Implemented","Bad Gateway","Service Unavailable","Gateway Timeout","HTTP Version Not Supported","Variant Also Negotiates","Insufficient Storage","Loop Detected","Not Extended"
 };
 static VALUE default_env;
+static VALUE global_envs[GLOBAL_ENVS_NUM];
 
 static void
 init_default_env()
@@ -31,6 +32,30 @@ static VALUE
 dupe_default_env()
 {
     return rb_funcall(default_env, rb_intern("dup"), 0);
+}
+
+static void
+init_global_envs()
+{
+    int i;
+    global_envs[GE_GET           ] = rb_str_new2("GET");
+    global_envs[GE_HEAD          ] = rb_str_new2("HEAD");
+    global_envs[GE_HTTP_VERSION  ] = rb_str_new2("HTTP_VERSION");
+    global_envs[GE_PATH_INFO     ] = rb_str_new2("PATH_INFO");
+    global_envs[GE_POST          ] = rb_str_new2("POST");
+    global_envs[GE_QUERY_STRING  ] = rb_str_new2("QUERY_STRING");
+    global_envs[GE_RACK_ERRORS   ] = rb_str_new2("rack.errors");
+    global_envs[GE_RACK_INPUT    ] = rb_str_new2("rack.input");
+    global_envs[GE_REMOTE_ADDR   ] = rb_str_new2("REMOTE_ADDR");
+    global_envs[GE_REQUEST_METHOD] = rb_str_new2("REQUEST_METHOD");
+    global_envs[GE_REQUEST_PATH  ] = rb_str_new2("REQUEST_PATH");
+    global_envs[GE_REQUEST_URI   ] = rb_str_new2("REQUEST_URI");
+    global_envs[GE_SERVER_NAME   ] = rb_str_new2("SERVER_NAME");
+    global_envs[GE_SERVER_PORT   ] = rb_str_new2("SERVER_PORT");
+    for(i=0; i<GLOBAL_ENVS_NUM; i++)
+    {
+        global_envs[i] = rb_obj_freeze(global_envs[i]);
+    }
 }
 
 static void
@@ -57,7 +82,7 @@ set_http_version(VALUE env, struct evhttp_request *req)
 {
     char  buf[8 + 1]; // HTTP/x.y
     snprintf(buf, 9, "HTTP/%d.%d", req->major, req->minor);
-    rb_hash_aset(env, rb_str_new2("HTTP_VERSION"), rb_obj_freeze(rb_str_new2(buf)));
+    rb_hash_aset(env, global_envs[GE_HTTP_VERSION], rb_obj_freeze(rb_str_new2(buf)));
 }
 
 static void
@@ -86,9 +111,9 @@ set_path_info(VALUE env, struct evhttp_request *req)
     rb_obj_freeze(request_uri);
     rb_obj_freeze(query_string);
 
-    rb_hash_aset(env, rb_str_new2("PATH_INFO"), request_uri);
-    rb_hash_aset(env, rb_str_new2("REQUEST_PATH"), request_uri);
-    rb_hash_aset(env, rb_str_new2("QUERY_STRING"), query_string);
+    rb_hash_aset(env, global_envs[GE_PATH_INFO],    request_uri);
+    rb_hash_aset(env, global_envs[GE_REQUEST_PATH], request_uri);
+    rb_hash_aset(env, global_envs[GE_QUERY_STRING], query_string);
 
     xfree(buf);
 }
@@ -122,37 +147,36 @@ set_http_header(VALUE env, struct evhttp_request *req)
 static VALUE
 aspirin_server_create_env(struct evhttp_request *req, Aspirin_Server *srv)
 {
-    VALUE env, rack_input, strio, remote_host, request_uri, method;
+    VALUE env, rack_input, strio, remote_host, request_uri;
 
     env = rb_funcall(srv->env, rb_intern("dup"), 0);
 
-    rb_hash_aset(env, rb_str_new2("rack.errors"), rb_gv_get("$stderr"));
+    rb_hash_aset(env, global_envs[GE_RACK_ERRORS], rb_gv_get("$stderr"));
 
     rack_input = rb_str_new((const char*)EVBUFFER_DATA(req->input_buffer),
                             EVBUFFER_LENGTH(req->input_buffer));
     rb_obj_freeze(rack_input);
     strio = rb_funcall(rb_cStringIO, rb_intern("new"), 1, rack_input);
-    rb_hash_aset(env, rb_str_new2("rack.input"), strio);
+    rb_hash_aset(env, global_envs[GE_RACK_INPUT], strio);
 
     rb_hash_aset(env,
-                 rb_str_new2("REMOTE_ADDR"),
+                 global_envs[GE_REMOTE_ADDR],
                  rb_obj_freeze(rb_str_new2(req->remote_host)));
 
     rb_hash_aset(env,
-                 rb_str_new2("REQUEST_URI"),
+                 global_envs[GE_REQUEST_URI],
                  rb_obj_freeze(rb_str_new2(evhttp_request_uri(req))));
 
-    method = rb_str_new2("REQUEST_METHOD");
     switch(req->type)
     {
     case EVHTTP_REQ_GET:
-        rb_hash_aset(env, method, rb_obj_freeze(rb_str_new2("GET")));
+        rb_hash_aset(env, global_envs[GE_REQUEST_METHOD], global_envs[GE_GET]);
         break;
     case EVHTTP_REQ_POST:
-        rb_hash_aset(env, method, rb_obj_freeze(rb_str_new2("POST")));
+        rb_hash_aset(env, global_envs[GE_REQUEST_METHOD], global_envs[GE_POST]);
         break;
     case EVHTTP_REQ_HEAD:
-        rb_hash_aset(env, method, rb_obj_freeze(rb_str_new2("HEAD")));
+        rb_hash_aset(env, global_envs[GE_REQUEST_METHOD], global_envs[GE_HEAD]);
         break;
     }
 
@@ -418,11 +442,11 @@ aspirin_server_http_initialize(Aspirin_Server *srv)
     int   port = aspirin_server_port(srv->options);
 
     StringValue(host);
-    rb_hash_aset(srv->env, rb_str_new2("SERVER_NAME"), host);
+    rb_hash_aset(srv->env, global_envs[GE_SERVER_NAME], host);
 
     char port_str[6];
     snprintf(port_str, 5, "%d", port);
-    rb_hash_aset(srv->env, rb_str_new2("SERVER_PORT"), rb_str_new2(port_str));
+    rb_hash_aset(srv->env, global_envs[GE_SERVER_PORT], rb_str_new2(port_str));
 
     srv->http = evhttp_new(srv->base);
     evhttp_bind_socket(srv->http, RSTRING_PTR(host), port);
@@ -476,6 +500,7 @@ void Init_aspirin(void)
 
     init_default_env();
     init_status_code_tbl();
+    init_global_envs();
 
     rb_require("stringio");
     rb_cStringIO = rb_const_get(rb_cObject, rb_intern("StringIO"));

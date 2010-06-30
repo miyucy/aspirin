@@ -19,6 +19,24 @@
 
 #define INSPECT(obj) {VALUE __obj__ = rb_inspect((obj)); fprintf(stderr, "%d:%s\n", __LINE__, RSTRING_PTR(__obj__));}
 
+enum{
+    GE_GET,
+    GE_HEAD,
+    GE_HTTP_VERSION,
+    GE_PATH_INFO,
+    GE_POST,
+    GE_QUERY_STRING,
+    GE_RACK_ERRORS,
+    GE_RACK_INPUT,
+    GE_REMOTE_ADDR,
+    GE_REQUEST_METHOD,
+    GE_REQUEST_PATH,
+    GE_REQUEST_URI,
+    GE_SERVER_NAME,
+    GE_SERVER_PORT,
+    GLOBAL_ENVS_NUM,
+};
+
 typedef struct
 {
     struct event_base* base;
