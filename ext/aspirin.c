@@ -483,6 +483,8 @@ rack_handler_aspirin_run(int argc, VALUE *argv, VALUE obj)
 
 void Init_aspirin(void)
 {
+    VALUE rb_mRack, rb_mRack_Handler, rb_mRack_Handler_Aspirin;
+
     init_default_env();
     init_status_code_tbl();
 
@@ -498,8 +500,8 @@ void Init_aspirin(void)
     rb_define_method(rb_cAspirin_Server, "start", aspirin_server_start, 0);
 
     // Rack::Handler::Aspirin
-    VALUE rb_mRack = rb_define_module("Rack");
-    VALUE rb_mRack_Handler = rb_define_module_under(rb_mRack, "Handler");
-    VALUE rb_mRack_Handler_Aspirin = rb_define_module_under(rb_mRack_Handler, "Aspirin");
+    rb_mRack = rb_define_module("Rack");
+    rb_mRack_Handler = rb_define_module_under(rb_mRack, "Handler");
+    rb_mRack_Handler_Aspirin = rb_define_module_under(rb_mRack_Handler, "Aspirin");
     rb_define_singleton_method(rb_mRack_Handler_Aspirin, "run", rack_handler_aspirin_run, -1);
 }
