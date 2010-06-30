@@ -1,19 +1,4 @@
-#include <ruby.h>
-#ifdef HAVE_RUBY_ST_H
-#include <ruby/st.h>
-#else
-#include <st.h>
-#endif
-#include <signal.h>
-#include <sys/queue.h>
-#include <stdio.h>
-#include <ctype.h>
-
-#include <event.h>
-#include <evhttp.h>
-#include <evutil.h>
-
-#define INSPECT(obj) {VALUE __obj__ = rb_inspect((obj)); fprintf(stderr, "%d:%s\n", __LINE__, RSTRING_PTR(__obj__));}
+#include "aspirin.h"
 
 static VALUE rb_mAspirin;
 static VALUE rb_cAspirin_Server;
@@ -26,54 +11,6 @@ static const char* const status_code_str[] = {
     "Continue","Switching Protocols","Processing","OK","Created","Accepted","Non-Authoritative Information","No Content","Reset Content","Partial Content","Multi-Status","Already Reported","IM Used","Multiple Choices","Moved Permanently","Found","See Other","Not Modified","Use Proxy","","Temporary Redirect","Bad Request","Unauthorized","Payment Required","Forbidden","Not Found","Method Not Allowed","Not Acceptable","Proxy Authentication Required","Request Timeout","Conflict","Gone","Length Required","Precondition Failed","Request Entity Too Large","Request-URI Too Long","Unsupported Media Type","Requested Range Not Satisfiable","Expectation Failed","","","Unprocessable Entity","Locked","Failed Dependency","","Upgrade Required","Internal Server Error","Not Implemented","Bad Gateway","Service Unavailable","Gateway Timeout","HTTP Version Not Supported","Variant Also Negotiates","Insufficient Storage","Loop Detected","Not Extended"
 };
 static VALUE default_env;
-
-typedef struct
-{
-    struct event_base* base;
-    struct evhttp*     http;
-    struct event       sig_int;
-    struct event       sig_quit;
-    struct event       sig_term;
-    VALUE              app;
-    VALUE              options;
-    VALUE              env;
-} Aspirin_Server;
-
-// Aspirin::Server.new
-static VALUE aspirin_server_initialize(VALUE, VALUE, VALUE);
-// Aspirin::Server.start
-static VALUE aspirin_server_start(VALUE);
-// Rack::Handler::Aspirin.run
-static VALUE rack_handler_aspirin_run(int, VALUE*, VALUE);
-
-static VALUE aspirin_server_address(VALUE);
-static int   aspirin_server_port(VALUE);
-
-static VALUE aspirin_server_alloc(VALUE);
-static void  aspirin_server_mark(Aspirin_Server*);
-static void  aspirin_server_free(Aspirin_Server*);
-
-static void  aspirin_server_http_request(struct evhttp_request*, void*);
-static VALUE aspirin_server_create_env(struct evhttp_request*, Aspirin_Server*);
-
-static void  aspirin_server_base_initialize(Aspirin_Server*);
-static void  aspirin_server_signal_initialize(Aspirin_Server*);
-static void  aspirin_server_stop(int, short, void*);
-static void  aspirin_server_stop_bang(int, short, void*);
-static void  aspirin_server_http_initialize(Aspirin_Server*);
-
-static void  set_http_version(VALUE, struct evhttp_request*);
-static void  set_path_info(VALUE, struct evhttp_request*);
-static void  set_response_header(struct evhttp_request*, VALUE);
-static void  set_additional_header(struct evhttp_request*);
-
-static void  init_default_env();
-static VALUE dupe_default_env();
-static void  init_status_code_tbl();
-static char* get_status_code_message(int);
-
-static char* upcase(char*);
-static char* hyphen_to_under(char*);
 
 static void
 init_default_env()
