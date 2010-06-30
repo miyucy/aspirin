@@ -193,15 +193,6 @@ set_additional_header(struct evhttp_request *req)
     evhttp_add_header(req->output_headers, "Connection", "close");
 }
 
-static void
-evbuffer_data_free(struct evbuffer* buf)
-{
-    if(buf)
-    {
-        evbuffer_free(buf);
-    }
-}
-
 static VALUE
 body_concat(VALUE chunk, VALUE* buff)
 {
@@ -214,10 +205,9 @@ body_concat(VALUE chunk, VALUE* buff)
 static VALUE
 body_each(VALUE body)
 {
-    VALUE buf = Data_Wrap_Struct(rb_cData, NULL, evbuffer_data_free, 0);
-    DATA_PTR(buf) = evbuffer_new();
-    rb_iterate(rb_each, body, body_concat, (VALUE)&buf);
-    return buf;
+    VALUE data = rb_ary_entry(body, 1);
+    rb_iterate(rb_each, rb_ary_entry(body, 0), body_concat, (VALUE)&data);
+    return Qnil;
 }
 
 static VALUE
@@ -235,7 +225,7 @@ aspirin_server_http_request(struct evhttp_request *req, void *arg)
 {
     struct evbuffer *buf;
     Aspirin_Server  *srv;
-    VALUE env, result, body, data;
+    VALUE env, result, body, buff;
     int   status_code;
     char *status_code_msg;
 
@@ -253,15 +243,15 @@ aspirin_server_http_request(struct evhttp_request *req, void *arg)
     set_response_header(req, rb_ary_entry(result, 1));
     set_additional_header(req);
 
-    body = rb_ary_entry(result, 2);
-    data = rb_ensure(body_each, body, body_close, body);
+    buff = Data_Wrap_Struct(rb_cData, 0, 0, 0);
+    DATA_PTR(buff) = req->output_buffer;
 
-    evhttp_send_reply(req, status_code, status_code_msg, DATA_PTR(data));
+    body = rb_ary_new3(2, rb_ary_entry(result, 2), buff);
 
-    // manually release data
-    evbuffer_data_free(DATA_PTR(data));
-    DATA_PTR(data) = NULL;
-    rb_gc_force_recycle(data);
+    rb_ensure(body_each, body, body_close, rb_ary_entry(result, 2));
+    evhttp_send_reply(req, status_code, status_code_msg, NULL);
+
+    DATA_PTR(buff) = NULL;
 }
 
 static Aspirin_Server*
