@@ -316,6 +316,14 @@ aspirin_server_start(VALUE obj)
     return Qnil;
 }
 
+static VALUE
+aspirin_server_shutdown(VALUE obj)
+{
+    Aspirin_Server *srv = DATA_PTR(obj);
+    event_base_loopbreak(srv->base);
+    return Qnil;
+}
+
 static void
 aspirin_server_mark(Aspirin_Server* srv)
 {
@@ -496,6 +504,7 @@ void Init_aspirin(void)
     rb_define_alloc_func(rb_cAspirin_Server, aspirin_server_alloc);
     rb_define_method(rb_cAspirin_Server, "initialize", aspirin_server_initialize, 2);
     rb_define_method(rb_cAspirin_Server, "start", aspirin_server_start, 0);
+    rb_define_method(rb_cAspirin_Server, "shutdown", aspirin_server_shutdown, 0);
 
     // Rack::Handler::Aspirin
     rb_mRack = rb_define_module("Rack");

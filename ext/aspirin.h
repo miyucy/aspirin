@@ -53,6 +53,8 @@ typedef struct
 static VALUE aspirin_server_initialize(VALUE, VALUE, VALUE);
 // Aspirin::Server#start
 static VALUE aspirin_server_start(VALUE);
+// Aspirin::Server#shutdown
+static VALUE aspirin_server_shutdown(VALUE);
 // Rack::Handler::Aspirin.run
 static VALUE rack_handler_aspirin_run(int, VALUE*, VALUE);
 
