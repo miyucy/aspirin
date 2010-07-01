@@ -502,4 +502,10 @@ void Init_aspirin(void)
     rb_mRack_Handler = rb_define_module_under(rb_mRack, "Handler");
     rb_mRack_Handler_Aspirin = rb_define_module_under(rb_mRack_Handler, "Aspirin");
     rb_define_singleton_method(rb_mRack_Handler_Aspirin, "run", rack_handler_aspirin_run, -1);
+    // rb_mRack_Handler.register
+    if(rb_respond_to(rb_mRack_Handler, rb_intern("register")))
+    {
+        rb_funcall(rb_mRack_Handler, rb_intern("register"),
+                   2, rb_str_new2("aspirin"), rb_str_new2("Rack::Handler::Aspirin"));
+    }
 }
