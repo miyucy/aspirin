@@ -34,6 +34,8 @@ enum{
     GE_REQUEST_URI,
     GE_SERVER_NAME,
     GE_SERVER_PORT,
+    GE_FRAGMENT,
+    GE_EMPTY,
     GLOBAL_ENVS_NUM,
 };
 

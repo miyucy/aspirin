@@ -52,6 +52,8 @@ init_global_envs()
     global_envs[GE_REQUEST_URI   ] = rb_str_new2("REQUEST_URI");
     global_envs[GE_SERVER_NAME   ] = rb_str_new2("SERVER_NAME");
     global_envs[GE_SERVER_PORT   ] = rb_str_new2("SERVER_PORT");
+    global_envs[GE_FRAGMENT      ] = rb_str_new2("FRAGMENT");
+    global_envs[GE_EMPTY         ] = rb_str_new2("");
     for(i=0; i<GLOBAL_ENVS_NUM; i++)
     {
         rb_gc_mark(rb_obj_freeze(global_envs[i]));
@@ -86,34 +88,52 @@ set_http_version(VALUE env, struct evhttp_request *req)
 }
 
 static void
-set_path_info(VALUE env, struct evhttp_request *req)
+set_fragment(VALUE env, char *request_uri)
 {
-    VALUE request_uri, query_string;
-    char *buf, *query;
-    int   len = strlen(evhttp_request_uri(req));
-
-    buf = xmalloc(len + 1);
-    strcpy(buf, evhttp_request_uri(req));
-
-    query = strrchr(buf, '?');
-    if(query != NULL)
+    char *fragment = strrchr(request_uri, '#');
+    if(fragment != NULL)
     {
-        *query++ = '\0';
+        *fragment++ = '\0';
+        rb_hash_aset(env, global_envs[GE_FRAGMENT], rb_obj_freeze(rb_str_new2(fragment)));
     }
     else
     {
-        query = "";
+        rb_hash_aset(env, global_envs[GE_FRAGMENT], global_envs[GE_EMPTY]);
     }
+}
 
-    request_uri  = rb_str_new2(buf);
-    query_string = rb_str_new2(query);
+static void
+set_query_string(VALUE env, char *request_uri)
+{
+    char *query_string = strrchr(request_uri, '?');
+    if(query_string != NULL)
+    {
+        *query_string++ = '\0';
+        rb_hash_aset(env, global_envs[GE_QUERY_STRING], rb_obj_freeze(rb_str_new2(query_string)));
+    }
+    else
+    {
+        rb_hash_aset(env, global_envs[GE_QUERY_STRING], global_envs[GE_EMPTY]);
+    }
+}
 
-    rb_obj_freeze(request_uri);
-    rb_obj_freeze(query_string);
+static void
+set_path_info(VALUE env, struct evhttp_request *req)
+{
+    VALUE request_uri;
+    const char *rui = evhttp_request_uri(req);
+    char *buf;
+
+    buf = xmalloc(strlen(rui) + 1);
+    strcpy(buf, rui);
+
+    set_fragment(env, buf);
+    set_query_string(env, buf);
+
+    request_uri = rb_obj_freeze(rb_str_new2(buf));
 
     rb_hash_aset(env, global_envs[GE_PATH_INFO],    request_uri);
     rb_hash_aset(env, global_envs[GE_REQUEST_PATH], request_uri);
-    rb_hash_aset(env, global_envs[GE_QUERY_STRING], query_string);
 
     xfree(buf);
 }
