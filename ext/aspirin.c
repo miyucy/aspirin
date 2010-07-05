@@ -88,32 +88,17 @@ set_http_version(VALUE env, struct evhttp_request *req)
 }
 
 static void
-set_fragment(VALUE env, char *request_uri)
+set_parts(VALUE env, char* uri, char delim, int offset)
 {
-    char *fragment = strrchr(request_uri, '#');
-    if(fragment != NULL)
+    char *part = strrchr(uri, delim);
+    if(part != NULL)
     {
-        *fragment++ = '\0';
-        rb_hash_aset(env, global_envs[GE_FRAGMENT], rb_obj_freeze(rb_str_new2(fragment)));
+        *part++ = '\0';
+        rb_hash_aset(env, global_envs[offset], rb_obj_freeze(rb_str_new2(part)));
     }
     else
     {
-        rb_hash_aset(env, global_envs[GE_FRAGMENT], global_envs[GE_EMPTY]);
-    }
-}
-
-static void
-set_query_string(VALUE env, char *request_uri)
-{
-    char *query_string = strrchr(request_uri, '?');
-    if(query_string != NULL)
-    {
-        *query_string++ = '\0';
-        rb_hash_aset(env, global_envs[GE_QUERY_STRING], rb_obj_freeze(rb_str_new2(query_string)));
-    }
-    else
-    {
-        rb_hash_aset(env, global_envs[GE_QUERY_STRING], global_envs[GE_EMPTY]);
+        rb_hash_aset(env, global_envs[offset], global_envs[GE_EMPTY]);
     }
 }
 
@@ -127,8 +112,8 @@ set_path_info(VALUE env, struct evhttp_request *req)
     buf = xmalloc(strlen(rui) + 1);
     strcpy(buf, rui);
 
-    set_fragment(env, buf);
-    set_query_string(env, buf);
+    set_parts(env, buf, '#', GE_FRAGMENT);
+    set_parts(env, buf, '?', GE_QUERY_STRING);
 
     request_uri = rb_obj_freeze(rb_str_new2(buf));
 
