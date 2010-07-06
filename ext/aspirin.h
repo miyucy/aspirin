@@ -19,7 +19,8 @@
 
 #define INSPECT(obj) {VALUE __obj__ = rb_inspect((obj)); fprintf(stderr, "%d:%s\n", __LINE__, RSTRING_PTR(__obj__));}
 
-enum{
+enum
+{
     GE_GET,
     GE_HEAD,
     GE_HTTP_VERSION,
@@ -51,40 +52,56 @@ typedef struct
     VALUE              env;
 } Aspirin_Server;
 
-// Aspirin::Server.new
-static VALUE aspirin_server_initialize(VALUE, VALUE, VALUE);
-// Aspirin::Server#start
-static VALUE aspirin_server_start(VALUE);
-// Aspirin::Server#shutdown
-static VALUE aspirin_server_shutdown(VALUE);
-// Rack::Handler::Aspirin.run
-static VALUE rack_handler_aspirin_run(int, VALUE*, VALUE);
+typedef struct
+{
+    struct evhttp_request* request;
+} Aspirin_Response;
 
-static VALUE aspirin_server_host(VALUE);
-static int   aspirin_server_port(VALUE);
+extern VALUE rb_mAspirin;
+extern VALUE rb_cAspirin_Server;
+extern VALUE rb_cAspirin_Response;
+extern VALUE rb_cStringIO;
+extern VALUE default_env;
+extern VALUE global_envs[];
 
-static VALUE aspirin_server_alloc(VALUE);
-static void  aspirin_server_mark(Aspirin_Server*);
-static void  aspirin_server_free(Aspirin_Server*);
+void  init_default_env();
+VALUE dupe_default_env();
+void  init_global_envs();
+void  init_status_code_tbl();
+char* get_status_code_message(int);
+VALUE aspirin_server_alloc(VALUE);
+void  aspirin_server_mark(Aspirin_Server*);
+void  aspirin_server_free(Aspirin_Server*);
+VALUE aspirin_server_initialize(VALUE, VALUE, VALUE);
+void  aspirin_server_base_initialize(Aspirin_Server*);
+void  aspirin_server_signal_initialize(Aspirin_Server*);
+void  aspirin_server_stop(int, short, void*);
+void  aspirin_server_stop_bang(int, short, void*);
+void  aspirin_server_http_initialize(Aspirin_Server*);
+VALUE aspirin_server_host(VALUE);
+int   aspirin_server_port(VALUE);
+void  aspirin_server_http_request(struct evhttp_request*, void*);
+VALUE aspirin_server_start(VALUE);
+VALUE aspirin_server_shutdown(VALUE);
+void  aspirin_response_start(struct evhttp_request*, VALUE, VALUE);
+void  aspirin_response_free(Aspirin_Response*);
+VALUE aspirin_response_call_with_catch_async(VALUE, VALUE);
+VALUE aspirin_response_call(VALUE, VALUE);
+void  aspirin_response_set_header(struct evhttp_request*, VALUE);
+void  aspirin_response_set_additional_header(struct evhttp_request*);
+void  aspirin_response_set_body(struct evhttp_request*, VALUE);
+VALUE aspirin_response_each_body(VALUE);
+VALUE aspirin_response_write_body(VALUE, VALUE*);
+VALUE aspirin_response_close_body(VALUE);
+VALUE aspirin_response_create_env(VALUE, VALUE);
+void  set_rack_input(VALUE, struct evbuffer*);
+void  set_rack_errors(VALUE);
+void  set_remote_host(VALUE, char*);
+void  set_request_path(VALUE, const char*);
+void  set_parts(VALUE, char*, char, int);
+void  set_request_method(VALUE, enum evhttp_cmd_type);
+void  set_http_version(VALUE, char, char);
+void  set_http_header(VALUE, struct evkeyvalq*);
+char* upper_snake(char*);
 
-static void  aspirin_server_http_request(struct evhttp_request*, void*);
-static VALUE aspirin_server_create_env(struct evhttp_request*, Aspirin_Server*);
-
-static void  aspirin_server_base_initialize(Aspirin_Server*);
-static void  aspirin_server_signal_initialize(Aspirin_Server*);
-static void  aspirin_server_stop(int, short, void*);
-static void  aspirin_server_stop_bang(int, short, void*);
-static void  aspirin_server_http_initialize(Aspirin_Server*);
-
-static void  set_http_version(VALUE, struct evhttp_request*);
-static void  set_path_info(VALUE, struct evhttp_request*);
-static void  set_response_header(struct evhttp_request*, VALUE);
-static void  set_additional_header(struct evhttp_request*);
-
-static void  init_default_env();
-static VALUE dupe_default_env();
-static void  init_status_code_tbl();
-static char* get_status_code_message(int);
-
-static char* upper_snake(char*);
 #endif
