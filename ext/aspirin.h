@@ -59,6 +59,8 @@ typedef struct
 typedef struct
 {
     struct evhttp_request* request;
+    VALUE              app;
+    VALUE              env;
 } Aspirin_Response;
 
 extern VALUE rb_mAspirin;
@@ -88,8 +90,10 @@ void  aspirin_server_http_request(struct evhttp_request*, void*);
 VALUE aspirin_server_start(VALUE);
 VALUE aspirin_server_shutdown(VALUE);
 void  aspirin_response_start(struct evhttp_request*, VALUE, VALUE);
+void  aspirin_response_mark(Aspirin_Response*);
 VALUE aspirin_response_call_with_catch_async(VALUE, VALUE);
 VALUE aspirin_response_call(VALUE, VALUE);
+int   aspirin_response_each_header(VALUE, VALUE, VALUE);
 void  aspirin_response_set_header(struct evhttp_request*, VALUE);
 void  aspirin_response_set_additional_header(struct evhttp_request*);
 void  aspirin_response_set_body(struct evhttp_request*, VALUE);

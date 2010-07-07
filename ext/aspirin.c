@@ -25,14 +25,16 @@ init_default_env()
     rb_hash_aset(default_env, rb_str_new2("rack.url_scheme"),   rb_obj_freeze(rb_str_new2("http")));
     rb_hash_aset(default_env, rb_str_new2("rack.version"),      rb_obj_freeze(rb_ary_new3(2, INT2FIX(1), INT2FIX(1))));
     rb_hash_aset(default_env, rb_str_new2("GATEWAY_INTERFACE"), rb_obj_freeze(rb_str_new2("CGI/1.2")));
-    rb_hash_aset(default_env, rb_str_new2("SCRIPT_NAME"),       rb_obj_freeze(rb_str_new2("")));
+    rb_hash_aset(default_env, rb_str_new2("SCRIPT_NAME"),       global_envs[GE_EMPTY]);
     rb_hash_aset(default_env, rb_str_new2("SERVER_PROTOCOL"),   rb_obj_freeze(rb_str_new2("HTTP/1.1")));
+
+    rb_obj_freeze(default_env);
 }
 
 VALUE
 dupe_default_env()
 {
-    return rb_funcall(default_env, rb_intern("dup"), 0);
+    return rb_obj_dup(default_env);
 }
 
 void
@@ -60,7 +62,8 @@ init_global_envs()
     global_envs[GE_ASYNC_CLOSE   ] = rb_str_new2("async.close");
     for(i=0; i<GLOBAL_ENVS_NUM; i++)
     {
-        rb_gc_mark(rb_obj_freeze(global_envs[i]));
+        rb_obj_freeze(global_envs[i]);
+        rb_gc_mark(global_envs[i]);
     }
 }
 
@@ -95,7 +98,8 @@ rack_handler_aspirin_run(int argc, VALUE *argv, VALUE obj)
     return Qnil;
 }
 
-void Init_aspirin(void)
+void
+Init_aspirin(void)
 {
     VALUE rb_mRack, rb_mRack_Handler, rb_mRack_Handler_Aspirin;
 

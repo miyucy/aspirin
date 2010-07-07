@@ -4,24 +4,40 @@ void
 aspirin_response_start(struct evhttp_request* request, VALUE app, VALUE env)
 {
     Aspirin_Response *response;
-    VALUE obj = Data_Make_Struct(rb_cAspirin_Response, Aspirin_Response, 0, -1, response);
-    response->request = request;
+    VALUE obj = Data_Make_Struct(rb_cAspirin_Response, Aspirin_Response, aspirin_response_mark, -1, response);
 
-    VALUE envs = aspirin_response_create_env(obj, env);
-    VALUE arg = rb_ary_new3(2, app, envs);
+    response->request = request;
+    response->app = app;
+    response->env = aspirin_response_create_env(obj, env);
+
+    VALUE arg = rb_ary_new3(2, response->app, response->env);
     VALUE ret = rb_catch("async", aspirin_response_call_with_catch_async, arg);
     aspirin_response_call(obj, ret);
+}
+
+void
+aspirin_response_mark(Aspirin_Response* res)
+{
+    if(!res)
+    {
+        return;
+    }
+    rb_gc_mark(res->app);
+    rb_gc_mark(res->env);
 }
 
 VALUE
 aspirin_response_call_with_catch_async(VALUE tag, VALUE arg)
 {
-    return rb_funcall(rb_ary_entry(arg, 0), rb_intern("call"), 1, rb_ary_entry(arg, 1));
+    VALUE app = rb_ary_entry(arg, 0);
+    VALUE env = rb_ary_entry(arg, 1);
+    return rb_funcall(app, rb_intern("call"), 1, env);
 }
 
 VALUE
 aspirin_response_call(VALUE obj, VALUE result)
 {
+    // throw :async
     if(result == Qnil)
     {
         return Qnil;
@@ -29,11 +45,13 @@ aspirin_response_call(VALUE obj, VALUE result)
 
     Check_Type(result, T_ARRAY);
 
+    // AsyncResponse
     int status_code = NUM2INT(rb_ary_entry(result, 0));
     if(status_code == -1)
     {
         return Qnil;
     }
+
     char* status_msg = get_status_code_message(status_code);
     if(status_msg == NULL)
     {
@@ -41,50 +59,52 @@ aspirin_response_call(VALUE obj, VALUE result)
     }
 
     Aspirin_Response *response;
-    VALUE headers = rb_ary_entry(result, 1);
-    VALUE body = rb_ary_entry(result, 2);
     Data_Get_Struct(obj, Aspirin_Response, response);
+
+    VALUE headers = rb_ary_entry(result, 1);
     aspirin_response_set_header(response->request, headers);
+
+    VALUE body = rb_ary_entry(result, 2);
     aspirin_response_set_body(response->request, body);
+
     evhttp_send_reply(response->request, status_code, status_msg, NULL);
 
     return Qnil;
 }
 
-void
-aspirin_response_set_header(struct evhttp_request* req, VALUE headers)
+int
+aspirin_response_each_header(VALUE _key, VALUE _val, VALUE headers)
 {
-    int i, n;
-    VALUE header_keys = rb_funcall(headers, rb_intern("keys"), 0);
-
-    n = RARRAY_LEN(header_keys);
-    for(i=0; i<n; i++)
+    VALUE key = rb_str_to_str(_key);
+    VALUE val = rb_str_to_str(_val);
+    if(RSTRING_LEN(key) > 0 && RSTRING_LEN(val) > 0)
     {
-        VALUE key = rb_ary_entry(header_keys, i);
-        VALUE val = rb_hash_aref(headers, key);
-        StringValue(key);
-        StringValue(val);
-        if(RSTRING_LEN(key) > 0 && RSTRING_LEN(val) > 0)
-        {
-            evhttp_remove_header(req->output_headers, StringValueCStr(key));
-            evhttp_add_header(req->output_headers, StringValueCStr(key), StringValueCStr(val));
-        }
+        evhttp_remove_header(DATA_PTR(headers), RSTRING_PTR(key));
+        evhttp_add_header(DATA_PTR(headers), RSTRING_PTR(key), RSTRING_PTR(val));
     }
-
-    aspirin_response_set_additional_header(req);
+    return ST_CONTINUE;
 }
 
 void
-aspirin_response_set_additional_header(struct evhttp_request* req)
+aspirin_response_set_header(struct evhttp_request* request, VALUE headers)
 {
-    evhttp_remove_header(req->output_headers, "Connection");
-    evhttp_add_header(req->output_headers, "Connection", "close");
+    VALUE output_headers = Data_Wrap_Struct(rb_cData, 0, 0, request->output_headers);
+    rb_hash_foreach(headers, aspirin_response_each_header, output_headers);
+    DATA_PTR(output_headers) = NULL;
+    aspirin_response_set_additional_header(request);
 }
 
 void
-aspirin_response_set_body(struct evhttp_request* req, VALUE body)
+aspirin_response_set_additional_header(struct evhttp_request* request)
 {
-    VALUE buff = Data_Wrap_Struct(rb_cData, 0, 0, req->output_buffer);
+    evhttp_remove_header(request->output_headers, "Connection");
+    evhttp_add_header(request->output_headers, "Connection", "close");
+}
+
+void
+aspirin_response_set_body(struct evhttp_request* request, VALUE body)
+{
+    VALUE buff = Data_Wrap_Struct(rb_cData, 0, 0, request->output_buffer);
     VALUE args = rb_ary_new3(2, body, buff);
     rb_ensure(aspirin_response_each_body, args, aspirin_response_close_body, body);
     DATA_PTR(buff) = NULL;
@@ -120,19 +140,21 @@ aspirin_response_close_body(VALUE body)
 VALUE
 aspirin_response_create_env(VALUE obj, VALUE default_env)
 {
+    VALUE env = rb_obj_dup(default_env);
+
     Aspirin_Response *response;
     Data_Get_Struct(obj, Aspirin_Response, response);
-    struct evhttp_request *req = response->request;
-    VALUE env = rb_funcall(default_env, rb_intern("dup"), 0);
 
-    set_rack_input(env, req->input_buffer);
+    struct evhttp_request *request = response->request;
+
+    set_rack_input(env, request->input_buffer);
     set_rack_errors(env);
-    set_remote_host(env, req->remote_host);
-    set_request_path(env, evhttp_request_uri(req));
-    set_request_method(env, req->type);
-    set_http_version(env, req->major, req->minor);
-    set_http_header(env, req->input_headers);
-    set_async_callback(env, obj);
+    // set_request_method(env, request->type);
+    // set_remote_host(env, request->remote_host);
+    // set_http_version(env, request->major, request->minor);
+    // set_async_callback(env, obj);
+    // set_request_path(env, evhttp_request_uri(request));
+    // set_http_header(env, request->input_headers);
 
     return env;
 }
@@ -165,13 +187,12 @@ void
 set_request_path(VALUE env, const char* rui)
 {
     VALUE request_uri;
-    char *buf;
 
     request_uri = rb_str_new2(rui);
     request_uri = rb_obj_freeze(request_uri);
     rb_hash_aset(env, global_envs[GE_REQUEST_URI], request_uri);
 
-    buf = xmalloc(strlen(rui) + 1);
+    char *buf = xmalloc(strlen(rui) + 1);
     strcpy(buf, rui);
 
     set_parts(env, buf, '#', GE_FRAGMENT);
@@ -215,13 +236,16 @@ set_request_method(VALUE env, enum evhttp_cmd_type type)
     case EVHTTP_REQ_HEAD:
         rb_hash_aset(env, global_envs[GE_REQUEST_METHOD], global_envs[GE_HEAD]);
         break;
+    default:
+        rb_raise(rb_eFatal, "unknown evhttp_cmd_type");
+        break;
     }
 }
 
 void
 set_http_version(VALUE env, char major, char minor)
 {
-    char buf[8 + 1]; // HTTP/x.y
+    char buf[9]; // HTTP/x.y
     snprintf(buf, sizeof(buf), "HTTP/%d.%d", major, minor);
     rb_hash_aset(env, global_envs[GE_HTTP_VERSION], rb_obj_freeze(rb_str_new2(buf)));
 }
