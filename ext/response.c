@@ -153,6 +153,7 @@ aspirin_response_create_env(VALUE obj, VALUE default_env)
     set_remote_host(env, request->remote_host);
     set_http_version(env, request->major, request->minor);
     set_async_callback(env, obj);
+    set_request_uri(env, evhttp_request_uri(request));
     set_request_path(env, evhttp_request_uri(request));
     set_http_header(env, request->input_headers);
 
@@ -178,31 +179,29 @@ set_rack_errors(VALUE env)
 void
 set_remote_host(VALUE env, char* remote_host)
 {
-    VALUE rh = rb_str_new2(remote_host);
-    rb_obj_freeze(rh);
-    rb_hash_aset(env, global_envs[GE_REMOTE_ADDR], rh);
+    rb_hash_aset(env, global_envs[GE_REMOTE_ADDR], FRZSTR(remote_host));
+}
+
+void
+set_request_uri(VALUE env, const char* rui)
+{
+    rb_hash_aset(env, global_envs[GE_REQUEST_URI], FRZSTR(rui));
 }
 
 void
 set_request_path(VALUE env, const char* rui)
 {
-    VALUE request_uri;
-
-    request_uri = rb_str_new2(rui);
-    request_uri = rb_obj_freeze(request_uri);
-    rb_hash_aset(env, global_envs[GE_REQUEST_URI], request_uri);
-
+    VALUE request_path;
     char *buf = xmalloc(strlen(rui) + 1);
     strcpy(buf, rui);
 
     set_parts(env, buf, '#', GE_FRAGMENT);
     set_parts(env, buf, '?', GE_QUERY_STRING);
 
-    request_uri = rb_str_new2(buf);
-    request_uri = rb_obj_freeze(request_uri);
+    request_path = FRZSTR(buf);
 
-    rb_hash_aset(env, global_envs[GE_PATH_INFO],    request_uri);
-    rb_hash_aset(env, global_envs[GE_REQUEST_PATH], request_uri);
+    rb_hash_aset(env, global_envs[GE_PATH_INFO],    request_path);
+    rb_hash_aset(env, global_envs[GE_REQUEST_PATH], request_path);
 
     xfree(buf);
 }
@@ -214,7 +213,7 @@ set_parts(VALUE env, char* uri, char delim, int offset)
     if(part != NULL)
     {
         *part++ = '\0';
-        rb_hash_aset(env, global_envs[offset], rb_obj_freeze(rb_str_new2(part)));
+        rb_hash_aset(env, global_envs[offset], FRZSTR(part));
     }
     else
     {
@@ -245,9 +244,9 @@ set_request_method(VALUE env, enum evhttp_cmd_type type)
 void
 set_http_version(VALUE env, char major, char minor)
 {
-    char buf[9]; // HTTP/x.y
+    char buf[9];
     snprintf(buf, sizeof(buf), "HTTP/%d.%d", major, minor);
-    rb_hash_aset(env, global_envs[GE_HTTP_VERSION], rb_obj_freeze(rb_str_new2(buf)));
+    rb_hash_aset(env, global_envs[GE_HTTP_VERSION], FRZSTR(buf));
 }
 
 void
@@ -264,7 +263,7 @@ set_http_header(VALUE env, struct evkeyvalq* headers)
         {
             buf = xmalloc(5 + len + 1);
             upper_snake(strcpy(strcpy(buf, "HTTP_") + 5, header->key));
-            rb_hash_aset(env, rb_str_new2(buf), rb_obj_freeze(rb_str_new2(header->value)));
+            rb_hash_aset(env, rb_str_new2(buf), FRZSTR(header->value));
             xfree(buf);
         }
     }
@@ -293,17 +292,7 @@ upper_snake(char* str)
 void
 set_async_callback(VALUE env, VALUE obj)
 {
-#if 0
-    // rb_hash_aset(env,
-    //              global_envs[GE_ASYNC_CALLBACK],
-    //              rb_obj_method(obj, rb_obj_freeze(rb_str_new2("call"))));
-
-    // rb_hash_aset(env,
-    //              global_envs[GE_ASYNC_CALLBACK],
-    //              rb_obj_method(obj, rb_str_new2("call")));
-#else
     rb_hash_aset(env,
                  global_envs[GE_ASYNC_CALLBACK],
                  rb_obj_method(obj, ID2SYM(rb_intern("call"))));
-#endif
 }

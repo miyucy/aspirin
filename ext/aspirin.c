@@ -22,11 +22,11 @@ init_default_env()
     rb_hash_aset(default_env, rb_str_new2("rack.multiprocess"), Qfalse);
     rb_hash_aset(default_env, rb_str_new2("rack.multithread"),  Qfalse);
     rb_hash_aset(default_env, rb_str_new2("rack.run_once"),     Qfalse);
-    rb_hash_aset(default_env, rb_str_new2("rack.url_scheme"),   rb_obj_freeze(rb_str_new2("http")));
+    rb_hash_aset(default_env, rb_str_new2("rack.url_scheme"),   FRZSTR("http"));
     rb_hash_aset(default_env, rb_str_new2("rack.version"),      rb_obj_freeze(rb_ary_new3(2, INT2FIX(1), INT2FIX(1))));
-    rb_hash_aset(default_env, rb_str_new2("GATEWAY_INTERFACE"), rb_obj_freeze(rb_str_new2("CGI/1.2")));
+    rb_hash_aset(default_env, rb_str_new2("GATEWAY_INTERFACE"), FRZSTR("CGI/1.2"));
     rb_hash_aset(default_env, rb_str_new2("SCRIPT_NAME"),       global_envs[GE_EMPTY]);
-    rb_hash_aset(default_env, rb_str_new2("SERVER_PROTOCOL"),   rb_obj_freeze(rb_str_new2("HTTP/1.1")));
+    rb_hash_aset(default_env, rb_str_new2("SERVER_PROTOCOL"),   FRZSTR("HTTP/1.1"));
 
     rb_obj_freeze(default_env);
 }
@@ -62,8 +62,7 @@ init_global_envs()
     global_envs[GE_ASYNC_CLOSE   ] = rb_str_new2("async.close");
     for(i=0; i<GLOBAL_ENVS_NUM; i++)
     {
-        rb_obj_freeze(global_envs[i]);
-        rb_gc_mark(global_envs[i]);
+        rb_gc_mark(rb_obj_freeze(global_envs[i]));
     }
 }
 

@@ -18,6 +18,7 @@
 #include <evutil.h>
 
 #define INSPECT(obj) {VALUE __obj__ = rb_inspect((obj)); fprintf(stderr, "%d:%s\n", __LINE__, RSTRING_PTR(__obj__));}
+#define FRZSTR(str) (rb_obj_freeze(rb_str_new2((str))))
 
 enum
 {
@@ -104,6 +105,7 @@ VALUE aspirin_response_create_env(VALUE, VALUE);
 void  set_rack_input(VALUE, struct evbuffer*);
 void  set_rack_errors(VALUE);
 void  set_remote_host(VALUE, char*);
+void  set_request_uri(VALUE, const char*);
 void  set_request_path(VALUE, const char*);
 void  set_parts(VALUE, char*, char, int);
 void  set_request_method(VALUE, enum evhttp_cmd_type);

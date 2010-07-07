@@ -118,11 +118,11 @@ aspirin_server_http_initialize(Aspirin_Server *srv)
     int   port = aspirin_server_port(srv->options);
 
     StringValue(host);
-    rb_hash_aset(srv->env, global_envs[GE_SERVER_NAME], host);
+    rb_hash_aset(srv->env, global_envs[GE_SERVER_NAME], rb_obj_freeze(host));
 
     char port_str[6];
     snprintf(port_str, sizeof(port_str), "%d", port);
-    rb_hash_aset(srv->env, global_envs[GE_SERVER_PORT], rb_str_new2(port_str));
+    rb_hash_aset(srv->env, global_envs[GE_SERVER_PORT], FRZSTR(port_str));
 
     srv->http = evhttp_new(srv->base);
     evhttp_bind_socket(srv->http, RSTRING_PTR(host), port);
