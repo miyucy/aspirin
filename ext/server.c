@@ -62,6 +62,7 @@ aspirin_server_initialize(VALUE obj, VALUE app, VALUE options)
     srv->app = app;
     srv->options = options;
     srv->env = dupe_default_env();
+    srv->exit = 0;
 
     aspirin_server_base_initialize(srv);
     aspirin_server_signal_initialize(srv);
@@ -97,6 +98,7 @@ aspirin_server_stop(int fd, short event, void *arg)
 {
     Aspirin_Server *srv = arg;
     struct timeval delay = {1, 0};
+    srv->exit = 1;
     event_del(&srv->sig_quit);
     event_base_loopexit(srv->base, &delay);
 }
@@ -105,6 +107,7 @@ void
 aspirin_server_stop_bang(int fd, short event, void *arg)
 {
     Aspirin_Server *srv = arg;
+    srv->exit = 1;
     event_base_loopbreak(srv->base);
 }
 
@@ -118,7 +121,7 @@ aspirin_server_http_initialize(Aspirin_Server *srv)
     rb_hash_aset(srv->env, global_envs[GE_SERVER_NAME], host);
 
     char port_str[6];
-    snprintf(port_str, 5, "%d", port);
+    snprintf(port_str, sizeof(port_str), "%d", port);
     rb_hash_aset(srv->env, global_envs[GE_SERVER_PORT], rb_str_new2(port_str));
 
     srv->http = evhttp_new(srv->base);
@@ -162,11 +165,21 @@ aspirin_server_http_request(struct evhttp_request *req, void *arg)
 }
 
 VALUE
+aspirin_server_thread(Aspirin_Server* srv)
+{
+    while(event_base_loop(srv->base, EVLOOP_NONBLOCK) != 1 && srv->exit == 0)
+    {
+        rb_thread_schedule();
+    }
+    return Qnil;
+}
+
+VALUE
 aspirin_server_start(VALUE obj)
 {
-    Aspirin_Server *srv = DATA_PTR(obj);
-    event_base_loop(srv->base, 0);
-    return Qnil;
+    VALUE thread = rb_thread_create(aspirin_server_thread,
+                                    (void*)DATA_PTR(obj));
+    return rb_funcall(thread, rb_intern("join"), 0);
 }
 
 VALUE

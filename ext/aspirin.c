@@ -55,6 +55,9 @@ init_global_envs()
     global_envs[GE_SERVER_PORT   ] = rb_str_new2("SERVER_PORT");
     global_envs[GE_FRAGMENT      ] = rb_str_new2("FRAGMENT");
     global_envs[GE_EMPTY         ] = rb_str_new2("");
+    global_envs[GE_ASYNC_CALLBACK] = rb_str_new2("async.callback");
+    global_envs[GE_CALL          ] = rb_str_new2("call");
+    global_envs[GE_ASYNC_CLOSE   ] = rb_str_new2("async.close");
     for(i=0; i<GLOBAL_ENVS_NUM; i++)
     {
         rb_gc_mark(rb_obj_freeze(global_envs[i]));

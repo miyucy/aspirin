@@ -37,6 +37,9 @@ enum
     GE_SERVER_PORT,
     GE_FRAGMENT,
     GE_EMPTY,
+    GE_ASYNC_CALLBACK,
+    GE_CALL,
+    GE_ASYNC_CLOSE,
     GLOBAL_ENVS_NUM,
 };
 
@@ -50,6 +53,7 @@ typedef struct
     VALUE              app;
     VALUE              options;
     VALUE              env;
+    int                exit;
 } Aspirin_Server;
 
 typedef struct
@@ -84,7 +88,6 @@ void  aspirin_server_http_request(struct evhttp_request*, void*);
 VALUE aspirin_server_start(VALUE);
 VALUE aspirin_server_shutdown(VALUE);
 void  aspirin_response_start(struct evhttp_request*, VALUE, VALUE);
-void  aspirin_response_free(Aspirin_Response*);
 VALUE aspirin_response_call_with_catch_async(VALUE, VALUE);
 VALUE aspirin_response_call(VALUE, VALUE);
 void  aspirin_response_set_header(struct evhttp_request*, VALUE);
@@ -103,5 +106,7 @@ void  set_request_method(VALUE, enum evhttp_cmd_type);
 void  set_http_version(VALUE, char, char);
 void  set_http_header(VALUE, struct evkeyvalq*);
 char* upper_snake(char*);
+void  set_async_callback(VALUE, VALUE);
+
 
 #endif
