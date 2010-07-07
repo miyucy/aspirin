@@ -149,12 +149,12 @@ aspirin_response_create_env(VALUE obj, VALUE default_env)
 
     set_rack_input(env, request->input_buffer);
     set_rack_errors(env);
-    // set_request_method(env, request->type);
-    // set_remote_host(env, request->remote_host);
-    // set_http_version(env, request->major, request->minor);
-    // set_async_callback(env, obj);
-    // set_request_path(env, evhttp_request_uri(request));
-    // set_http_header(env, request->input_headers);
+    set_request_method(env, request->type);
+    set_remote_host(env, request->remote_host);
+    set_http_version(env, request->major, request->minor);
+    set_async_callback(env, obj);
+    set_request_path(env, evhttp_request_uri(request));
+    set_http_header(env, request->input_headers);
 
     return env;
 }
@@ -293,6 +293,17 @@ upper_snake(char* str)
 void
 set_async_callback(VALUE env, VALUE obj)
 {
-    VALUE method = rb_obj_method(obj, global_envs[GE_CALL]);
-    rb_hash_aset(env, global_envs[GE_ASYNC_CALLBACK], method);
+#if 0
+    // rb_hash_aset(env,
+    //              global_envs[GE_ASYNC_CALLBACK],
+    //              rb_obj_method(obj, rb_obj_freeze(rb_str_new2("call"))));
+
+    // rb_hash_aset(env,
+    //              global_envs[GE_ASYNC_CALLBACK],
+    //              rb_obj_method(obj, rb_str_new2("call")));
+#else
+    rb_hash_aset(env,
+                 global_envs[GE_ASYNC_CALLBACK],
+                 rb_obj_method(obj, ID2SYM(rb_intern("call"))));
+#endif
 }
