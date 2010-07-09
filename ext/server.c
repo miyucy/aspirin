@@ -1,4 +1,14 @@
 #include "aspirin.h"
+static void  aspirin_server_mark(Aspirin_Server*);
+static void  aspirin_server_free(Aspirin_Server*);
+static void  aspirin_server_base_initialize(Aspirin_Server*);
+static void  aspirin_server_signal_initialize(Aspirin_Server*);
+static void  aspirin_server_stop(int, short, void*);
+static void  aspirin_server_stop_bang(int, short, void*);
+static void  aspirin_server_http_initialize(Aspirin_Server*);
+static VALUE aspirin_server_host(VALUE);
+static int   aspirin_server_port(VALUE);
+static void  aspirin_server_http_request(struct evhttp_request*, void*);
 
 VALUE
 aspirin_server_alloc(VALUE klass)
@@ -6,7 +16,7 @@ aspirin_server_alloc(VALUE klass)
     return Data_Wrap_Struct(klass, aspirin_server_mark, aspirin_server_free, 0);
 }
 
-void
+static void
 aspirin_server_mark(Aspirin_Server* srv)
 {
     if(!srv)
@@ -18,7 +28,7 @@ aspirin_server_mark(Aspirin_Server* srv)
     rb_gc_mark(srv->env);
 }
 
-void
+static void
 aspirin_server_free(Aspirin_Server* srv)
 {
     if(!srv)
@@ -71,13 +81,13 @@ aspirin_server_initialize(VALUE obj, VALUE app, VALUE options)
     return obj;
 }
 
-void
+static void
 aspirin_server_base_initialize(Aspirin_Server *srv)
 {
     srv->base = event_base_new();
 }
 
-void
+static void
 aspirin_server_signal_initialize(Aspirin_Server *srv)
 {
     event_set(&srv->sig_quit, SIGQUIT, EV_SIGNAL|EV_PERSIST, aspirin_server_stop, srv);
@@ -93,7 +103,7 @@ aspirin_server_signal_initialize(Aspirin_Server *srv)
     event_add(&srv->sig_term, NULL);
 }
 
-void
+static void
 aspirin_server_stop(int fd, short event, void *arg)
 {
     Aspirin_Server *srv = arg;
@@ -103,7 +113,7 @@ aspirin_server_stop(int fd, short event, void *arg)
     event_base_loopexit(srv->base, &delay);
 }
 
-void
+static void
 aspirin_server_stop_bang(int fd, short event, void *arg)
 {
     Aspirin_Server *srv = arg;
@@ -111,7 +121,7 @@ aspirin_server_stop_bang(int fd, short event, void *arg)
     event_base_loopbreak(srv->base);
 }
 
-void
+static void
 aspirin_server_http_initialize(Aspirin_Server *srv)
 {
     VALUE host = aspirin_server_host(srv->options);
@@ -129,7 +139,7 @@ aspirin_server_http_initialize(Aspirin_Server *srv)
     evhttp_set_gencb(srv->http, aspirin_server_http_request, srv);
 }
 
-VALUE
+static VALUE
 aspirin_server_host(VALUE options)
 {
     VALUE address = Qnil;
@@ -143,7 +153,7 @@ aspirin_server_host(VALUE options)
     return rb_str_new2("0.0.0.0");
 }
 
-int
+static int
 aspirin_server_port(VALUE options)
 {
     VALUE port = Qnil;
@@ -157,14 +167,14 @@ aspirin_server_port(VALUE options)
     return 9292;
 }
 
-void
+static void
 aspirin_server_http_request(struct evhttp_request *req, void *arg)
 {
     Aspirin_Server *srv = arg;
     aspirin_response_start(req, srv->app, srv->env);
 }
 
-VALUE
+static VALUE
 aspirin_server_thread(Aspirin_Server* srv)
 {
     while(event_base_loop(srv->base, EVLOOP_NONBLOCK) != 1 && srv->exit == 0)

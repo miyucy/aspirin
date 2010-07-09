@@ -1,4 +1,7 @@
 #include "aspirin.h"
+static void  init_default_env();
+static void  init_global_envs();
+static void  init_status_code_tbl();
 
 VALUE rb_mAspirin;
 VALUE rb_cAspirin_Server;
@@ -14,7 +17,7 @@ static const char* const status_code_str[] = {
 VALUE default_env;
 VALUE global_envs[GLOBAL_ENVS_NUM];
 
-void
+static void
 init_default_env()
 {
     default_env = rb_hash_new();
@@ -37,7 +40,7 @@ dupe_default_env()
     return rb_obj_dup(default_env);
 }
 
-void
+static void
 init_global_envs()
 {
     int i;
@@ -66,7 +69,7 @@ init_global_envs()
     }
 }
 
-void
+static void
 init_status_code_tbl()
 {
     int i, n = sizeof(status_code_int)/sizeof(int);

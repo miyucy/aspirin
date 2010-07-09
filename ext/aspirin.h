@@ -71,48 +71,13 @@ extern VALUE rb_cStringIO;
 extern VALUE default_env;
 extern VALUE global_envs[];
 
-void  init_default_env();
 VALUE dupe_default_env();
-void  init_global_envs();
-void  init_status_code_tbl();
 char* get_status_code_message(int);
 VALUE aspirin_server_alloc(VALUE);
-void  aspirin_server_mark(Aspirin_Server*);
-void  aspirin_server_free(Aspirin_Server*);
 VALUE aspirin_server_initialize(VALUE, VALUE, VALUE);
-void  aspirin_server_base_initialize(Aspirin_Server*);
-void  aspirin_server_signal_initialize(Aspirin_Server*);
-void  aspirin_server_stop(int, short, void*);
-void  aspirin_server_stop_bang(int, short, void*);
-void  aspirin_server_http_initialize(Aspirin_Server*);
-VALUE aspirin_server_host(VALUE);
-int   aspirin_server_port(VALUE);
-void  aspirin_server_http_request(struct evhttp_request*, void*);
 VALUE aspirin_server_start(VALUE);
 VALUE aspirin_server_shutdown(VALUE);
 void  aspirin_response_start(struct evhttp_request*, VALUE, VALUE);
-void  aspirin_response_mark(Aspirin_Response*);
-VALUE aspirin_response_call_with_catch_async(VALUE, VALUE);
 VALUE aspirin_response_call(VALUE, VALUE);
-int   aspirin_response_each_header(VALUE, VALUE, VALUE);
-void  aspirin_response_set_header(struct evhttp_request*, VALUE);
-void  aspirin_response_set_additional_header(struct evhttp_request*);
-void  aspirin_response_set_body(struct evhttp_request*, VALUE);
-VALUE aspirin_response_each_body(VALUE);
-VALUE aspirin_response_write_body(VALUE, VALUE*);
-VALUE aspirin_response_close_body(VALUE);
-VALUE aspirin_response_create_env(VALUE, VALUE);
-void  set_rack_input(VALUE, struct evbuffer*);
-void  set_rack_errors(VALUE);
-void  set_remote_host(VALUE, char*);
-void  set_request_uri(VALUE, const char*);
-void  set_request_path(VALUE, const char*);
-void  set_parts(VALUE, char*, char, int);
-void  set_request_method(VALUE, enum evhttp_cmd_type);
-void  set_http_version(VALUE, char, char);
-void  set_http_header(VALUE, struct evkeyvalq*);
-char* upper_snake(char*);
-void  set_async_callback(VALUE, VALUE);
-
 
 #endif
