@@ -7,9 +7,9 @@ begin
     gem.name = "aspirin"
     gem.summary = %Q{evhttp wrapper and Rack interface}
     gem.description = %Q{evhttp wrapper and Rack interface}
-    gem.email = "fistfvck@gmail.com"
-    gem.homepage = "http://github.com/fistfvck/aspirin"
-    gem.authors = ["fistfvck"]
+    gem.email = "miyucy@gmail.com"
+    gem.homepage = "http://github.com/miyucy/aspirin"
+    gem.authors = ["miyucy"]
     gem.add_development_dependency "rspec", ">= 1.2.9"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
