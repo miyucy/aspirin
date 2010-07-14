@@ -8,7 +8,7 @@ VALUE rb_cAspirin_Server;
 VALUE rb_cAspirin_Response;
 VALUE rb_cStringIO;
 static struct st_table *status_code_tbl;
-static const int const status_code_int[] = {
+static const int status_code_int[] = {
     100,101,102,200,201,202,203,204,205,206,207,208,226,300,301,302,303,304,305,306,307,400,401,402,403,404,405,406,407,408,409,410,411,412,413,414,415,416,417,420,421,422,423,424,425,426,500,501,502,503,504,505,506,507,508,510
 };
 static const char* const status_code_str[] = {
@@ -32,6 +32,7 @@ init_default_env()
     rb_hash_aset(default_env, rb_str_new2("SERVER_PROTOCOL"),   FRZSTR("HTTP/1.1"));
 
     rb_obj_freeze(default_env);
+    rb_gc_register_address(&default_env);
 }
 
 VALUE
@@ -65,7 +66,8 @@ init_global_envs()
     global_envs[GE_ASYNC_CLOSE   ] = rb_str_new2("async.close");
     for(i=0; i<GLOBAL_ENVS_NUM; i++)
     {
-        rb_gc_mark(rb_obj_freeze(global_envs[i]));
+        rb_obj_freeze(global_envs[i]);
+        rb_gc_register_address(global_envs + i);
     }
 }
 
